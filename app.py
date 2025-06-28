@@ -10,8 +10,6 @@ EMAIL = "x19191x@gmail.com"
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# قائمة الأسهم هنا (اختصرها لو تحب)
-
 tickers = [
     "AAPL", "MSFT", "AMZN", "GOOGL", "GOOG", "FB", "TSLA", "NVDA", "PYPL", "ADBE",
     "NFLX", "INTC", "CSCO", "PEP", "AVGO", "CMCSA", "TXN", "QCOM", "COST", "CHTR",
@@ -29,28 +27,36 @@ def get_rsi(series, period=14):
     delta = series.diff()
     gain = delta.where(delta > 0, 0)
     loss = -delta.where(delta < 0, 0)
-    avg_gain = gain.rolling(window=period).mean()
-    avg_loss = loss.rolling(window=period).mean()
+    avg_gain = gain.rolling(window=period, min_periods=period).mean()
+    avg_loss = loss.rolling(window=period, min_periods=period).mean()
     rs = avg_gain / avg_loss
-    return 100 - (100 / (1 + rs))
+    rsi = 100 - (100 / (1 + rs))
+    return rsi
 
 @app.route("/")
 def index():
     stocks_data = []
     for ticker in tickers:
         try:
-            data = yf.download(ticker, period="7d", interval="1d", timeout=10)
-            if data.empty or data['Close'].isnull().all():
-                logger.warning(f"No data for {ticker}")
+            data = yf.download(ticker, period="7d", interval="1d", timeout=10, progress=False)
+            if data.empty or 'Close' not in data.columns or data['Close'].dropna().empty:
+                logger.warning(f"No valid data for {ticker}")
                 continue
-            last_row = data.iloc[-1]
+
+            last_close = data['Close'].iloc[-1]
+            if pd.isna(last_close):
+                logger.warning(f"Last close price is NaN for {ticker}")
+                continue
+
             stocks_data.append({
                 "ticker": ticker,
-                "price": round(last_row["Close"], 2)
+                "price": round(last_close, 2)
             })
+
         except Exception as e:
             logger.error(f"Error with {ticker}: {e}")
             continue
+
     return render_template("index.html", stocks=stocks_data)
 
 @app.route("/filter")
@@ -59,48 +65,46 @@ def filter_stocks():
 
     for ticker in tickers:
         try:
-            data = yf.download(ticker, period="7d", interval="1d", auto_adjust=True, timeout=10)
+            data = yf.download(ticker, period="7d", interval="1d", auto_adjust=True, timeout=10, progress=False)
 
             if data is None or data.empty:
                 logger.warning(f"{ticker} — لا توجد بيانات")
                 continue
 
-            if 'Close' not in data.columns or data['Close'].dropna().empty:
-                logger.warning(f"{ticker} — لا توجد بيانات إغلاق")
-                continue
+            # تحقق وجود الأعمدة الأساسية وتأكد أن بياناتها غير فارغة
+            for col in ['Close', 'Volume']:
+                if col not in data.columns or data[col].dropna().empty:
+                    logger.warning(f"{ticker} — لا توجد بيانات {col}")
+                    break
+            else:  # يعني الأعمدة كلها موجودة وغير فارغة
 
-            if 'Volume' not in data.columns or data['Volume'].dropna().empty:
-                logger.warning(f"{ticker} — لا توجد بيانات حجم تداول")
-                continue
+                close = data['Close'].dropna()
+                volume = data['Volume'].dropna()
 
-            close = data['Close'].dropna()
-            volume = data['Volume'].dropna()
+                # تحقق من وجود عدد كافٍ من البيانات للتحليل
+                if len(close) < 15 or len(volume) < 15:
+                    logger.warning(f"{ticker} — بيانات غير كافية")
+                    continue
 
-            # التأكد من وجود بيانات كافية
-            if len(close) < 3 or len(volume) < 10:
-                logger.warning(f"{ticker} — بيانات غير كافية")
-                continue
+                rsi_series = get_rsi(close)
+                if rsi_series.empty or pd.isna(rsi_series.iloc[-1]):
+                    logger.warning(f"{ticker} — RSI غير صالح")
+                    continue
 
-            rsi_series = get_rsi(close)
-            if rsi_series.empty or pd.isna(rsi_series.iloc[-1]):
-                logger.warning(f"{ticker} — RSI غير صالح")
-                continue
+                rsi = rsi_series.iloc[-1]
+                price = close.iloc[-1]
+                vol_avg = volume.rolling(window=10, min_periods=10).mean().iloc[-1]
+                vol_now = volume.iloc[-1]
+                change = ((close.iloc[-1] - close.iloc[-2]) / close.iloc[-2]) * 100
 
-            rsi = rsi_series.iloc[-1]  # قيمة رقمية مفردة
-            price = close.iloc[-1]
-            vol_avg = volume.rolling(10).mean().iloc[-1]
-            vol_now = volume.iloc[-1]
-            change = (close.iloc[-1] - close.iloc[-2]) / close.iloc[-2] * 100
-
-            # شرط يستخدم قيم مفردة فقط
-            if (rsi < 45) and (change <= 1.5) and (vol_now > vol_avg):
-                selected.append({
-                    "ticker": ticker,
-                    "price": round(price, 2),
-                    "rsi": round(rsi, 2),
-                    "volume": int(vol_now),
-                    "change_pct": round(change, 2)
-                })
+                if (rsi < 45) and (change <= 1.5) and (vol_now > vol_avg):
+                    selected.append({
+                        "ticker": ticker,
+                        "price": round(price, 2),
+                        "rsi": round(rsi, 2),
+                        "volume": int(vol_now),
+                        "change_pct": round(change, 2)
+                    })
 
         except Exception as e:
             logger.error(f"Error with {ticker}: {e}")
@@ -112,6 +116,7 @@ def filter_stocks():
 @app.route("/health")
 def health():
     return "OK", 200
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
