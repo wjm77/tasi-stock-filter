@@ -75,15 +75,26 @@ def filter_stocks():
     for ticker in tickers:
         try:
             data = yf.download(ticker, period="7d", interval="1d", auto_adjust=True, timeout=10)
-            if data.empty or data['Close'].isnull().all():
-                logger.warning(f"No valid close data for {ticker}")
+
+            # تحقق شامل من أن البيانات موجودة وصحيحة
+            if data is None or data.empty:
+                logger.warning(f"No data for {ticker}")
+                continue
+
+            if 'Close' not in data.columns or data['Close'].isnull().all():
+                logger.warning(f"No close prices for {ticker}")
+                continue
+
+            if 'Volume' not in data.columns or data['Volume'].isnull().all():
+                logger.warning(f"No volume data for {ticker}")
                 continue
 
             close = data['Close']
             volume = data['Volume']
 
-            if len(close) < 2 or len(volume) < 10:
-                logger.info(f"Not enough data for {ticker}")
+            # تأكد من وجود عدد كافٍ من الأيام
+            if len(close) < 3 or len(volume) < 10:
+                logger.warning(f"Not enough data for {ticker}")
                 continue
 
             rsi = get_rsi(close).iloc[-1]
@@ -92,7 +103,7 @@ def filter_stocks():
             vol_now = volume.iloc[-1]
             change = (close.iloc[-1] - close.iloc[-2]) / close.iloc[-2] * 100
 
-            if rsi < 45 and change <= 1.5 and vol_now > vol_avg:
+            if pd.notnull(rsi) and rsi < 45 and change <= 1.5 and vol_now > vol_avg:
                 selected.append({
                     "ticker": ticker,
                     "price": round(price, 2),
@@ -100,11 +111,13 @@ def filter_stocks():
                     "volume": int(vol_now),
                     "change_pct": round(change, 2)
                 })
+
         except Exception as e:
-            logger.error(f"Error filtering {ticker}: {e}")
+            logger.error(f"Error with {ticker}: {e}")
             continue
 
     return jsonify(selected)
+
 
 @app.route("/health")
 def health():
