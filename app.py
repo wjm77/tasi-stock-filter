@@ -76,34 +76,38 @@ def filter_stocks():
         try:
             data = yf.download(ticker, period="7d", interval="1d", auto_adjust=True, timeout=10)
 
-            # تحقق شامل من أن البيانات موجودة وصحيحة
             if data is None or data.empty:
-                logger.warning(f"No data for {ticker}")
+                logger.warning(f"{ticker} — لا توجد بيانات")
                 continue
 
-            if 'Close' not in data.columns or data['Close'].isnull().all():
-                logger.warning(f"No close prices for {ticker}")
+            if 'Close' not in data.columns or data['Close'].dropna().empty:
+                logger.warning(f"{ticker} — لا توجد بيانات إغلاق")
                 continue
 
-            if 'Volume' not in data.columns or data['Volume'].isnull().all():
-                logger.warning(f"No volume data for {ticker}")
+            if 'Volume' not in data.columns or data['Volume'].dropna().empty:
+                logger.warning(f"{ticker} — لا توجد بيانات حجم تداول")
                 continue
 
-            close = data['Close']
-            volume = data['Volume']
+            close = data['Close'].dropna()
+            volume = data['Volume'].dropna()
 
-            # تأكد من وجود عدد كافٍ من الأيام
+            # التأكد من عدد الأيام الكافي
             if len(close) < 3 or len(volume) < 10:
-                logger.warning(f"Not enough data for {ticker}")
+                logger.warning(f"{ticker} — بيانات غير كافية")
                 continue
 
-            rsi = get_rsi(close).iloc[-1]
+            rsi_series = get_rsi(close)
+            if rsi_series.empty or pd.isna(rsi_series.iloc[-1]):
+                logger.warning(f"{ticker} — RSI غير صالح")
+                continue
+
+            rsi = rsi_series.iloc[-1]
             price = close.iloc[-1]
             vol_avg = volume.rolling(10).mean().iloc[-1]
             vol_now = volume.iloc[-1]
             change = (close.iloc[-1] - close.iloc[-2]) / close.iloc[-2] * 100
 
-            if pd.notnull(rsi) and rsi < 45 and change <= 1.5 and vol_now > vol_avg:
+            if rsi < 45 and change <= 1.5 and vol_now > vol_avg:
                 selected.append({
                     "ticker": ticker,
                     "price": round(price, 2),
@@ -117,6 +121,7 @@ def filter_stocks():
             continue
 
     return jsonify(selected)
+
 
 
 @app.route("/health")
