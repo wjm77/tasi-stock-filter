@@ -1,22 +1,22 @@
-// static/script.js
 async function fetchData() {
-    const response = await fetch("/filter");
-    const data = await response.json();
+    const response = await fetch('/filter');
+    const stocks = await response.json();
 
-    const tableBody = document.querySelector("#stocksTable tbody");
-    tableBody.innerHTML = ""; // حذف البيانات السابقة
+    const tbody = document.querySelector('#stocksTable tbody');
+    tbody.innerHTML = '';
 
-    data.forEach(stock => {
-        const row = document.createElement("tr");
-
-        row.innerHTML = `
+    stocks.forEach(stock => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
             <td>${stock.ticker}</td>
-            <td>${stock.price} ريال</td>
+            <td>${stock.price}</td>
             <td>${stock.rsi}</td>
-            <td>${stock.volume.toLocaleString()}</td>
+            <td>${stock.volume}</td>
             <td>${stock.change_pct}%</td>
         `;
-
-        tableBody.appendChild(row);
+        tbody.appendChild(tr);
     });
 }
+
+// تحميل البيانات أول مرة عند فتح الصفحة
+window.onload = fetchData;
