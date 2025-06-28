@@ -56,33 +56,44 @@ def index():
 @app.route("/filter")
 def filter_stocks():
     selected = []
+
     for ticker in tickers:
         try:
             data = yf.download(ticker, period="7d", interval="1d", auto_adjust=True, timeout=10)
+
             if data is None or data.empty:
-                logger.warning(f"{ticker} — no data")
+                logger.warning(f"{ticker} — لا توجد بيانات")
                 continue
+
             if 'Close' not in data.columns or data['Close'].dropna().empty:
-                logger.warning(f"{ticker} — no close data")
+                logger.warning(f"{ticker} — لا توجد بيانات إغلاق")
                 continue
+
             if 'Volume' not in data.columns or data['Volume'].dropna().empty:
-                logger.warning(f"{ticker} — no volume data")
+                logger.warning(f"{ticker} — لا توجد بيانات حجم تداول")
                 continue
+
             close = data['Close'].dropna()
             volume = data['Volume'].dropna()
+
+            # التأكد من وجود بيانات كافية
             if len(close) < 3 or len(volume) < 10:
-                logger.warning(f"{ticker} — insufficient data")
+                logger.warning(f"{ticker} — بيانات غير كافية")
                 continue
+
             rsi_series = get_rsi(close)
             if rsi_series.empty or pd.isna(rsi_series.iloc[-1]):
-                logger.warning(f"{ticker} — invalid RSI")
+                logger.warning(f"{ticker} — RSI غير صالح")
                 continue
-            rsi = rsi_series.iloc[-1]
+
+            rsi = rsi_series.iloc[-1]  # قيمة رقمية مفردة
             price = close.iloc[-1]
             vol_avg = volume.rolling(10).mean().iloc[-1]
             vol_now = volume.iloc[-1]
             change = (close.iloc[-1] - close.iloc[-2]) / close.iloc[-2] * 100
-            if rsi < 45 and change <= 1.5 and vol_now > vol_avg:
+
+            # شرط يستخدم قيم مفردة فقط
+            if (rsi < 45) and (change <= 1.5) and (vol_now > vol_avg):
                 selected.append({
                     "ticker": ticker,
                     "price": round(price, 2),
@@ -90,10 +101,13 @@ def filter_stocks():
                     "volume": int(vol_now),
                     "change_pct": round(change, 2)
                 })
+
         except Exception as e:
             logger.error(f"Error with {ticker}: {e}")
             continue
+
     return jsonify(selected)
+
 
 @app.route("/health")
 def health():
