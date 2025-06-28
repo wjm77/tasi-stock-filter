@@ -1,29 +1,12 @@
 from flask import Flask, jsonify, render_template
 import yfinance as yf
-
-# اختر رمز السهم (مثلاً أرامكو)
-ticker = yf.Ticker("2222.SR")
-
-# اجلب بيانات آخر 5 أيام (في حال اليوم لا توجد بيانات بسبب إغلاق السوق)
-data = ticker.history(period="5d")
-
-# تحقق من وجود بيانات أولاً
-if not data.empty:
-    last_row = data.iloc[-1]  # هذا آخر يوم متوفر
-    price = last_row['Close']  # السعر عند الإغلاق
-    date = last_row.name.strftime('%Y-%m-%d')  # التاريخ
-    
-    print(f"تاريخ الإغلاق: {date}")
-    print(f"سعر الإغلاق: {price} ريال")
-else:
-    print("لا توجد بيانات متاحة حالياً.")
-
 import pandas as pd
-import smtplib
-from email.mime.text import MIMEText
 
 app = Flask(__name__)
 
+EMAIL = "x19191x@gmail.com"
+
+# قائمة جميع الأسهم
 tickers = [
     "2222.SR", "2030.SR", "4030.SR", "4200.SR", "1202.SR", "1301.SR", "1304.SR",
     "1320.SR", "2001.SR", "2020.SR", "2090.SR", "2150.SR", "2170.SR", "2180.SR",
@@ -47,8 +30,7 @@ tickers = [
     "4300.SR", "4310.SR", "4320.SR", "4321.SR", "4322.SR"
 ]
 
-EMAIL = "x19191x@gmail.com"
-
+# حساب مؤشر RSI
 def get_rsi(series, period=14):
     delta = series.diff()
     gain = delta.where(delta > 0, 0)
@@ -58,18 +40,36 @@ def get_rsi(series, period=14):
     rs = avg_gain / avg_loss
     return 100 - (100 / (1 + rs))
 
+# الصفحة الرئيسية تعرض جميع الأسهم وأسعارها
 @app.route("/")
-def home():
-    return render_template("index.html")
+def index():
+    stocks_data = []
 
-@app.route("/filter")
-def filter_stocks():
-    selected = []
     for ticker in tickers:
         try:
             data = yf.download(ticker, period="7d", interval="1d")
+            if not data.empty:
+                last_row = data.iloc[-1]
+                stocks_data.append({
+                    "ticker": ticker,
+                    "price": round(last_row["Close"], 2)
+                })
+        except:
+            continue
+
+    return render_template("index.html", stocks=stocks_data)
+
+# الفلترة حسب شروط RSI وحجم التداول وتغير السعر
+@app.route("/filter")
+def filter_stocks():
+    selected = []
+
+    for ticker in tickers:
+        try:
+            data = yf.download(ticker, period="7d", interval="1d", auto_adjust=True)
             if data.shape[0] < 5:
                 continue
+
             close = data['Close']
             volume = data['Volume']
             rsi = get_rsi(close).iloc[-1]
@@ -86,28 +86,10 @@ def filter_stocks():
                     "volume": int(vol_now),
                     "change_pct": round(change, 2)
                 })
-        except Exception as e:
+        except:
             continue
 
     return jsonify(selected)
-
-def send_email(stocks):
-    body = "🟢 الأسهم المتوافقة مع شروط الدخول:\n\n"
-    for s in stocks:
-        body += f"{s['ticker']}: سعر {s['price']} | RSI {s['rsi']} | تغير {s['change_pct']}٪\n"
-
-    msg = MIMEText(body)
-    msg['Subject'] = "📈 تنبيه فلترة الأسهم اليومية - تاسي"
-    msg['From'] = "noreply@example.com"
-    msg['To'] = EMAIL
-
-    try:
-        with smtplib.SMTP('smtp.gmail.com', 587) as server:
-            server.starttls()
-            server.login("YOUR_GMAIL", "YOUR_APP_PASSWORD")
-            server.sendmail(msg['From'], [msg['To']], msg.as_string())
-    except Exception as e:
-        print("Email failed:", e)
 
 if __name__ == "__main__":
     import os
