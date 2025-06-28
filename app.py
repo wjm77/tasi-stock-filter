@@ -60,7 +60,6 @@ def filter_stocks():
                 logger.warning(f"{ticker} — لا توجد بيانات")
                 continue
 
-            # تحقق من الأعمدة المطلوبة
             required_cols = ['Close', 'Volume']
             if not all(col in data.columns for col in required_cols):
                 logger.warning(f"{ticker} — الأعمدة المطلوبة غير موجودة")
@@ -82,14 +81,26 @@ def filter_stocks():
                 logger.warning(f"{ticker} — RSI غير صالح")
                 continue
 
-            rsi = rsi_series.iloc[-1]   # قيمة RSI مفردة
-            price = close.iloc[-1]      # سعر الإغلاق الأخير
-            vol_avg = volume.rolling(window=10, min_periods=10).mean().iloc[-1]  # متوسط حجم التداول 10 أيام
-            vol_now = volume.iloc[-1]   # حجم التداول الحالي
-            change = ((close.iloc[-1] - close.iloc[-2]) / close.iloc[-2]) * 100  # نسبة التغير اليومي
+            rsi = rsi_series.iloc[-1]
+            price = close.iloc[-1]
+            vol_avg = volume.rolling(window=10, min_periods=10).mean().iloc[-1]
+            vol_now = volume.iloc[-1]
+            change = ((close.iloc[-1] - close.iloc[-2]) / close.iloc[-2]) * 100
 
-            # الشروط تستخدم قيم مفردة فقط (scalar)
-            if (rsi < 45) and (change <= 1.5) and (vol_now > vol_avg):
+            # تحقق من أن كل القيم مفردة وليست Series
+            for var_name, var_value in [('rsi', rsi), ('change', change), ('vol_now', vol_now), ('vol_avg', vol_avg)]:
+                if isinstance(var_value, pd.Series):
+                    logger.error(f"{ticker}: Variable {var_name} is a Series, expected scalar!")
+                    continue
+
+            # شرط آمن جداً: استخدم all() على قائمة القيم المنطقية بدل if مباشرة في حالة كان نوع غير متوقع
+            conditions = [
+                isinstance(rsi, (int, float)) and (rsi < 45),
+                isinstance(change, (int, float)) and (change <= 1.5),
+                isinstance(vol_now, (int, float)) and (vol_now > vol_avg)
+            ]
+
+            if all(conditions):
                 selected.append({
                     "ticker": ticker,
                     "price": round(price, 2),
