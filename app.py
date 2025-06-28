@@ -12,7 +12,18 @@ logger = logging.getLogger(__name__)
 
 # قائمة الأسهم هنا (اختصرها لو تحب)
 
-tickers = ["2222.SR", "2030.SR", "4030.SR", "4200.SR", "1202.SR", "1301.SR", "1304.SR"]
+tickers = [
+    "AAPL", "MSFT", "AMZN", "GOOGL", "GOOG", "FB", "TSLA", "NVDA", "PYPL", "ADBE",
+    "NFLX", "INTC", "CSCO", "PEP", "AVGO", "CMCSA", "TXN", "QCOM", "COST", "CHTR",
+    "AMGN", "SBUX", "MDLZ", "ISRG", "BKNG", "GILD", "FISV", "ZM", "INTU", "ATVI",
+    "REGN", "ADP", "LRCX", "MAR", "ADSK", "EA", "SNPS", "ILMN", "MU", "WDAY",
+    "BIIB", "MNST", "ROST", "EXC", "MELI", "ALXN", "IDXX", "ORLY", "EBAY", "KLAC",
+    "FAST", "CTAS", "ASML", "DOCU", "LULU", "CSX", "DXCM", "XLNX", "SGEN", "ILMN",
+    "SIRI", "SPLK", "VRSK", "SWKS", "WBA", "ANSS", "WDC", "CTSH", "XEL", "BIDU",
+    "CERN", "TTWO", "PAYX", "MCHP", "VRTX", "KDP", "DLTR", "CDNS", "PCAR", "ZBRA",
+    "OKTA", "CRWD", "LBTYA", "MSTR", "UAL", "SNAP", "TEAM", "EXPE", "ALGN", "NTES",
+    "EBIX", "VRSN", "JD", "MRVL", "ZS", "BKNG", "MOMO", "CHKP", "ANET", "ASAN"
+]
 
 def get_rsi(series, period=14):
     delta = series.diff()
