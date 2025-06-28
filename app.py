@@ -58,15 +58,14 @@ def filter_stocks():
 
 def send_email(stocks):
     body = "🟢 الأسهم المتوافقة مع شروط الدخول:\n\n"
-
-"
     for s in stocks:
-        body += f"{s['ticker']}: سعر {s['price']} | RSI {s['rsi']} | تغير {s['change_pct']}٪
-"
+        body += f"{s['ticker']}: سعر {s['price']} | RSI {s['rsi']} | تغير {s['change_pct']}٪\n"
+
     msg = MIMEText(body)
     msg['Subject'] = "📈 تنبيه فلترة الأسهم اليومية - تاسي"
     msg['From'] = "noreply@example.com"
     msg['To'] = EMAIL
+
     try:
         with smtplib.SMTP('smtp.gmail.com', 587) as server:
             server.starttls()
@@ -74,6 +73,3 @@ def send_email(stocks):
             server.sendmail(msg['From'], [msg['To']], msg.as_string())
     except Exception as e:
         print("Email failed:", e)
-
-if __name__ == "__main__":
-    app.run(debug=True)
