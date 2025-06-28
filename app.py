@@ -73,3 +73,8 @@ def send_email(stocks):
             server.sendmail(msg['From'], [msg['To']], msg.as_string())
     except Exception as e:
         print("Email failed:", e)
+
+if __name__ == "__main__":
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
