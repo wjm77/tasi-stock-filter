@@ -68,7 +68,7 @@ def filter_stocks():
         try:
             data = yf.download(ticker, period="7d", interval="1d", auto_adjust=True)
             if data.empty or data['Close'].isnull().all():
-            continue
+                continue
 
 
             close = data['Close']
