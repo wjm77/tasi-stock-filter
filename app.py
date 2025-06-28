@@ -1,10 +1,22 @@
 from flask import Flask, jsonify, render_template
 import yfinance as yf
 
-ticker = yf.Ticker("2222.SR")  # أرامكو كمثال
-data = ticker.history(period="1d")
+# اختر رمز السهم (مثلاً أرامكو)
+ticker = yf.Ticker("2222.SR")
 
-print(data)
+# اجلب بيانات آخر 5 أيام (في حال اليوم لا توجد بيانات بسبب إغلاق السوق)
+data = ticker.history(period="5d")
+
+# تحقق من وجود بيانات أولاً
+if not data.empty:
+    last_row = data.iloc[-1]  # هذا آخر يوم متوفر
+    price = last_row['Close']  # السعر عند الإغلاق
+    date = last_row.name.strftime('%Y-%m-%d')  # التاريخ
+    
+    print(f"تاريخ الإغلاق: {date}")
+    print(f"سعر الإغلاق: {price} ريال")
+else:
+    print("لا توجد بيانات متاحة حالياً.")
 
 import pandas as pd
 import smtplib
