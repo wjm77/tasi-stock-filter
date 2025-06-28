@@ -52,8 +52,6 @@ def filter_stocks():
         except Exception as e:
             continue
 
-    if selected:
-        send_email(selected)
     return jsonify(selected)
 
 def send_email(stocks):
