@@ -87,20 +87,16 @@ def filter_stocks():
             vol_now = volume.iloc[-1]
             change = ((close.iloc[-1] - close.iloc[-2]) / close.iloc[-2]) * 100
 
-            # تحقق من أن كل القيم مفردة وليست Series
-            for var_name, var_value in [('rsi', rsi), ('change', change), ('vol_now', vol_now), ('vol_avg', vol_avg)]:
-                if isinstance(var_value, pd.Series):
-                    logger.error(f"{ticker}: Variable {var_name} is a Series, expected scalar!")
-                    continue
+            # تأكد أن القيم scalar وليست Series لتجنب الخطأ
+            if not (isinstance(rsi, (int, float)) and
+                    isinstance(change, (int, float)) and
+                    isinstance(vol_now, (int, float)) and
+                    isinstance(vol_avg, (int, float))):
+                logger.error(f"{ticker}: إحدى القيم ليست scalar (rsi: {type(rsi)}, change: {type(change)}, vol_now: {type(vol_now)}, vol_avg: {type(vol_avg)})")
+                continue
 
-            # شرط آمن جداً: استخدم all() على قائمة القيم المنطقية بدل if مباشرة في حالة كان نوع غير متوقع
-            conditions = [
-                isinstance(rsi, (int, float)) and (rsi < 45),
-                isinstance(change, (int, float)) and (change <= 1.5),
-                isinstance(vol_now, (int, float)) and (vol_now > vol_avg)
-            ]
-
-            if all(conditions):
+            # شرط فلترة الأسهم
+            if (rsi < 45) and (change <= 1.5) and (vol_now > vol_avg):
                 selected.append({
                     "ticker": ticker,
                     "price": round(price, 2),
