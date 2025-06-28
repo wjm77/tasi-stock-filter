@@ -1,5 +1,11 @@
 from flask import Flask, jsonify, render_template
 import yfinance as yf
+
+ticker = yf.Ticker("2222.SR")  # أرامكو كمثال
+data = ticker.history(period="1d")
+
+print(data)
+
 import pandas as pd
 import smtplib
 from email.mime.text import MIMEText
