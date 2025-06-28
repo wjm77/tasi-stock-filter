@@ -82,40 +82,41 @@ def filter_stocks():
                 continue
 
             rsi = rsi_series.iloc[-1]
-vol_avg = volume.rolling(window=10, min_periods=10).mean().iloc[-1]
-vol_now = volume.iloc[-1]
-change = ((close.iloc[-1] - close.iloc[-2]) / close.iloc[-2]) * 100
+            vol_avg = volume.rolling(window=10, min_periods=10).mean().iloc[-1]
+            vol_now = volume.iloc[-1]
+            change = ((close.iloc[-1] - close.iloc[-2]) / close.iloc[-2]) * 100
 
-# تحويل إلى scalar إذا كانت Series من عنصر واحد
-if isinstance(rsi, pd.Series):
-    rsi = rsi.item()
-if isinstance(vol_avg, pd.Series):
-    vol_avg = vol_avg.item()
-if isinstance(vol_now, pd.Series):
-    vol_now = vol_now.item()
-if isinstance(change, pd.Series):
-    change = change.item()
+            # تحويل إلى scalar إذا كانت Series من عنصر واحد
+            if isinstance(rsi, pd.Series):
+                rsi = rsi.item()
+            if isinstance(vol_avg, pd.Series):
+                vol_avg = vol_avg.item()
+            if isinstance(vol_now, pd.Series):
+                vol_now = vol_now.item()
+            if isinstance(change, pd.Series):
+                change = change.item()
 
-# فحص القيم
-if any(pd.isna(v) for v in [rsi, change, vol_now, vol_avg]):
-    logger.warning(f"{ticker} — NaN values detected")
-    continue
+            # فحص القيم
+            if any(pd.isna(v) for v in [rsi, change, vol_now, vol_avg]):
+                logger.warning(f"{ticker} — NaN values detected")
+                continue
 
-# شرط الفلترة
-if (rsi < 45) and (change <= 1.5) and (vol_now > vol_avg):
-    selected.append({
-        "ticker": ticker,
-        "price": round(close.iloc[-1], 2),
-        "rsi": round(rsi, 2),
-        "volume": int(vol_now),
-        "change_pct": round(change, 2)
-    })
+            # شرط الفلترة
+            if (rsi < 45) and (change <= 1.5) and (vol_now > vol_avg):
+                selected.append({
+                    "ticker": ticker,
+                    "price": round(close.iloc[-1], 2),
+                    "rsi": round(rsi, 2),
+                    "volume": int(vol_now),
+                    "change_pct": round(change, 2)
+                })
 
         except Exception as e:
             logger.error(f"Error with {ticker}: {e}")
             continue
 
     return jsonify(selected)
+
 
 @app.route("/health")
 def health():
