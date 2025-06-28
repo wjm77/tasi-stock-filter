@@ -67,8 +67,9 @@ def filter_stocks():
     for ticker in tickers:
         try:
             data = yf.download(ticker, period="7d", interval="1d", auto_adjust=True)
-            if data.shape[0] < 5:
-                continue
+            if data.empty or data['Close'].isnull().all():
+            continue
+
 
             close = data['Close']
             volume = data['Volume']
