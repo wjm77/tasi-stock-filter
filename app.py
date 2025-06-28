@@ -57,7 +57,7 @@ def filter_stocks():
     return jsonify(selected)
 
 def send_email(stocks):
-    body = "🟢 الأسهم المتوافقة مع شروط الدخول:
+    body = "🟢 الأسهم المتوافقة مع شروط الدخول:\n\n"
 
 "
     for s in stocks:
