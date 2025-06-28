@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>تصفية الأسهم النقية - تاسي</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>فلترة الأسهم النقية (تاسي)</h1>
+        <button onclick="fetchData()">🔄 تحديث القائمة</button>
+        <table id="stocksTable">
+            <thead>
+                <tr>
+                    <th>رمز السهم</th>
+                    <th>السعر</th>
+                    <th>RSI</th>
+                    <th>الفوليوم</th>
+                    <th>التغير اليومي</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <script src="/static/script.js"></script>
+</body>
+</html>
