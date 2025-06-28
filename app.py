@@ -82,10 +82,10 @@ def filter_stocks():
                 continue
 
             rsi = rsi_series.iloc[-1]
-            price = close.iloc[-1]
+            change = ((close.iloc[-1] - close.iloc[-2]) / close.iloc[-2]) * 100
             vol_avg = volume.rolling(window=10, min_periods=10).mean().iloc[-1]
             vol_now = volume.iloc[-1]
-            change = ((close.iloc[-1] - close.iloc[-2]) / close.iloc[-2]) * 100
+
 
             # تأكد أن القيم scalar وليست Series لتجنب الخطأ
             if not (isinstance(rsi, (int, float)) and
