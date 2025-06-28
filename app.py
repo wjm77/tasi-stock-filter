@@ -7,17 +7,17 @@ import logging
 app = Flask(__name__)
 EMAIL = "x19191x@gmail.com"
 
-logging.basicConfig(level=logging.INFO)
+# إعداد اللوجر
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s:%(message)s')
 logger = logging.getLogger(__name__)
 
 tickers = [
-    # القائمة كما هي أو اختصر حسب الحاجة
     "AAPL", "MSFT", "AMZN", "GOOGL", "GOOG", "FB", "TSLA", "NVDA", "PYPL", "ADBE",
     "NFLX", "INTC", "CSCO", "PEP", "AVGO", "CMCSA", "TXN", "QCOM", "COST", "CHTR",
-    # ... أكمل القائمة ...
+    # ... أكمل القائمة حسب الحاجة ...
 ]
 
-def get_rsi(series, period=14):
+def get_rsi(series: pd.Series, period=14) -> pd.Series:
     delta = series.diff()
     gain = delta.where(delta > 0, 0.0)
     loss = -delta.where(delta < 0, 0.0)
@@ -36,8 +36,7 @@ def index():
             if data.empty or data['Close'].isnull().all():
                 logger.warning(f"No data for {ticker}")
                 continue
-            last_row = data.iloc[-1]
-            price = last_row["Close"]
+            price = data['Close'].iloc[-1]
             if pd.isna(price):
                 logger.warning(f"Price is NaN for {ticker}")
                 continue
@@ -57,12 +56,11 @@ def filter_stocks():
     for ticker in tickers:
         try:
             data = yf.download(ticker, period="30d", interval="1d", auto_adjust=True, timeout=10, progress=False)
-
             if data is None or data.empty:
                 logger.warning(f"{ticker} — لا توجد بيانات")
                 continue
 
-            # تأكد من وجود الأعمدة المطلوبة
+            # تحقق من الأعمدة المطلوبة
             required_cols = ['Close', 'Volume']
             if not all(col in data.columns for col in required_cols):
                 logger.warning(f"{ticker} — الأعمدة المطلوبة غير موجودة")
@@ -75,7 +73,6 @@ def filter_stocks():
                 logger.warning(f"{ticker} — بيانات الإغلاق أو حجم التداول فارغة")
                 continue
 
-            # تأكد من وجود بيانات كافية للفترة المطلوبة
             if len(close) < 15 or len(volume) < 15:
                 logger.warning(f"{ticker} — بيانات غير كافية")
                 continue
@@ -85,13 +82,13 @@ def filter_stocks():
                 logger.warning(f"{ticker} — RSI غير صالح")
                 continue
 
-            rsi = rsi_series.iloc[-1]
-            price = close.iloc[-1]
-            vol_avg = volume.rolling(window=10, min_periods=10).mean().iloc[-1]
-            vol_now = volume.iloc[-1]
-            change = ((close.iloc[-1] - close.iloc[-2]) / close.iloc[-2]) * 100
+            rsi = rsi_series.iloc[-1]   # قيمة RSI مفردة
+            price = close.iloc[-1]      # سعر الإغلاق الأخير
+            vol_avg = volume.rolling(window=10, min_periods=10).mean().iloc[-1]  # متوسط حجم التداول 10 أيام
+            vol_now = volume.iloc[-1]   # حجم التداول الحالي
+            change = ((close.iloc[-1] - close.iloc[-2]) / close.iloc[-2]) * 100  # نسبة التغير اليومي
 
-            # الشروط باستخدام قيم مفردة فقط
+            # الشروط تستخدم قيم مفردة فقط (scalar)
             if (rsi < 45) and (change <= 1.5) and (vol_now > vol_avg):
                 selected.append({
                     "ticker": ticker,
